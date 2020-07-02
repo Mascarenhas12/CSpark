@@ -8,24 +8,3 @@ Project's motivation:
   Furthermore, to the intermmediate player there might be confusion when they see the evaluation when there
   is no "apparent" mistake (i.e equal material and pieces) in the engine line's provided until a unreasonable
   ammount of moves for their rating.
-
-
-Project methodology:
-1st -> Defining objective:
-(from a certain player's perspective)
-    From a given chess position, owner's elo rating, elo differential, time remaining and time differential be able to provide a more accurate and representative estimation of the position's evaluation based on Stockfish 11, with said evaluation henceforth named CSE.
-
-2nd -> Create neural network structure and code
-
-3rd -> Create a small dataset for testing purposes
-
-4th -> Create a big data set of different positions from chess game databases:
-    Create scripts that extract positions from games
-
-5th -> Survey players of different levels on positions (of a new big dataset) and collect owner's elo rating
-
-6th -> Train CSpark on new training set with collected data
-
-7th -> Create new dataset for CSpark to evaluate and collect its CSE
-
-8th -> Review with peers and adapt CSpark to more accurately evaluate positions
