@@ -42,7 +42,6 @@ class CSpark:
     def __init__(self, config: CSparkConfig):
         self.stock = Stockfish("/usr/games/stockfish")
         self.config = config
-        self.move_count = 0
         self.mlt = []
         self.mgt = []
 
@@ -50,16 +49,19 @@ class CSpark:
         self.stock.set_fen_position(pos_before)
         SE = self.stock.get_evaluation()
         self.stock.set_fen_position(pos_after)
-        return self.stock.get_evaluation().get('value') / 100 - SE.get('value') / 100
+        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) - self.convert_dict_to_pawn_value(SE)
 
     def is_player_turn(self, turn):
         return self.config.get_colour() == turn
 
-    def match_total_until_play_num(self, pos_list: list[str], play_num: int) -> None:
+    def convert_dict_to_pawn_value(self, evaluation: dict) -> float:
+        return float(evaluation.get('value')) / 100
+
+    def match_total_until_play_num(self, pos_list: list[str], play_num: int, start: int) -> None:
         turn = "white"
         limit = (2 * play_num - 1, 2 * play_num)[self.config.get_colour() == "white"]
 
-        for i in range(self.move_count,limit - 1):
+        for i in range(start, limit - 1):
             SE = self.move_val(pos_list[i], pos_list[i + 1])
 
             if self.is_player_turn(turn):
@@ -71,12 +73,25 @@ class CSpark:
 
     def match_average_until_play_num(self, pos_list: list[str], play_num: int) -> dict[float, float]:
         """
-        TODO: Avoid repeating SE already done otherwise list get corrupted i.e only insert if not already there
         :param pos_list:
         :param play_num:
-        :return:
+        :return: dictionary of Match Loss Average and Match Gain Average
         """
 
-        self.match_total_until_play_num(pos_list, play_num)
+        self.match_total_until_play_num(pos_list, play_num, len(self.mlt) + len(self.mgt))
 
         return dict(MLA=sum(self.mlt) / len(self.mlt), MGA=sum(self.mgt) / len(self.mgt))
+
+    def raw_cspark_estimation(self, pos_list: list[str], play_num: int) -> float:
+        match_averages = self.match_average_until_play_num(pos_list, play_num)
+        self.stock.set_fen_position(pos_list[play_num])
+        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) \
+               + match_averages.get('MLA') \
+               + match_averages.get('MGA')
+
+    def cspark_estimation(self, pos_list: list[str], play_num: int, estimate_play_num: int = 1) -> float:
+        match_averages = self.match_average_until_play_num(pos_list, play_num)
+        self.stock.set_fen_position(pos_list[play_num])
+        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) \
+               + match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
+               + match_averages.get('MGA') * pow(self.config.get_opponent_emv(), estimate_play_num)
