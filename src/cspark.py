@@ -1,17 +1,36 @@
 from stockfish import Stockfish
 import chess
 import chess.pgn
-import io
+
+
+def extract_elo_from_pgn(pgn, colour):
+    elo_dict = dict()
+
+    game = chess.pgn.read_game(pgn)
+
+    if colour == "white":
+        elo_dict['elo'] = game.headers.get('WhiteElo')
+        elo_dict['opponent_elo'] = game.headers.get('BlackElo')
+    else:
+        elo_dict['elo'] = game.headers.get('BlackElo')
+        elo_dict['opponent_elo'] = game.headers.get('WhiteElo')
+
+    return elo_dict
+
+
+def estimated_move_value(emv_dict: dict, elo):
+    # 1400-1499 elo is R14
+    rank = "R" + str(elo / 100)
+    return emv_dict.get(rank)
 
 
 class CSparkConfig:
-    def __init__(self, pgn, colour, elo, opponent_elo, emv_dict):
+    def __init__(self, pgn, colour, emv_dict):
         self.pgn = pgn
         self.colour = colour
-        self.elo = elo
-        self.opponent_elo = opponent_elo
-        self.emv = self.estimated_move_value(emv_dict, elo)
-        self.opponent_emv = self.estimated_move_value(emv_dict, opponent_elo)
+        self.elo_dict = extract_elo_from_pgn(pgn, colour)
+        self.emv = estimated_move_value(emv_dict, self.elo_dict.get('elo'))
+        self.opponent_emv = estimated_move_value(emv_dict, self.elo_dict.get('opponent_elo'))
 
     def get_pgn(self):
         return self.pgn
@@ -20,21 +39,16 @@ class CSparkConfig:
         return self.colour
 
     def get_elo(self):
-        return self.elo
+        return self.elo_dict.get('elo')
 
     def get_opponent_elo(self):
-        return self.opponent_elo
+        return self.elo_dict.get('opponent_elo')
 
     def get_emv(self):
         return self.emv
 
     def get_opponent_emv(self):
         return self.opponent_emv
-
-    def estimated_move_value(self, emv_dict: dict, elo):
-        # 1400-1499 elo is R14
-        rank = "R" + str(elo / 100)
-        return emv_dict.get(rank)
 
     def get_fen_list_from_pgn(self):
         fen_list = []
@@ -46,6 +60,10 @@ class CSparkConfig:
             fen_list.append(board.fen())
 
         return fen_list
+
+
+def convert_dict_to_pawn_value(evaluation: dict) -> float:
+    return float(evaluation.get('value')) / 100
 
 
 class CSpark:
@@ -60,10 +78,7 @@ class CSpark:
         self.stock.set_fen_position(pos_before)
         se = self.stock.get_evaluation()
         self.stock.set_fen_position(pos_after)
-        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) - self.convert_dict_to_pawn_value(se)
-
-    def convert_dict_to_pawn_value(self, evaluation: dict) -> float:
-        return float(evaluation.get('value')) / 100
+        return convert_dict_to_pawn_value(self.stock.get_evaluation()) - convert_dict_to_pawn_value(se)
 
     def match_total_until_play_num(self, play_num: int, start: int) -> None:
         """
@@ -98,7 +113,7 @@ class CSpark:
     def raw_cspark_estimation(self, play_num: int) -> float:
         match_averages = self.match_average_until_play_num(play_num)
         self.stock.set_fen_position(self.pos_list[play_num])
-        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) \
+        return convert_dict_to_pawn_value(self.stock.get_evaluation()) \
                + match_averages.get('MLA') \
                + match_averages.get('MGA')
 
@@ -112,8 +127,9 @@ class CSpark:
             board.set_fen(position)
             board.push(move)
             self.stock.set_fen_position(board.fen())
-            se_total += self.convert_dict_to_pawn_value(self.stock.get_evaluation())
+            se_total += convert_dict_to_pawn_value(self.stock.get_evaluation())
 
+        board.set_fen(position)
         return se_total / board.legal_moves.count()
 
     def cspark_estimation(self, play_num: int, estimate_play_num: int = 1) -> float:
@@ -127,4 +143,3 @@ class CSpark:
         return se_avg \
                + match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
                + match_averages.get('MGA') * pow(self.config.get_opponent_emv(), estimate_play_num)
-
