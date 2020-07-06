@@ -1,4 +1,7 @@
 from stockfish import Stockfish
+import chess
+import chess.pgn
+import io
 
 
 class CSparkConfig:
@@ -34,7 +37,15 @@ class CSparkConfig:
         return emv_dict.get(rank)
 
     def get_fen_list_from_pgn(self):
-        return list()
+        fen_list = []
+        game = chess.pgn.read_game(self.pgn)
+        board = game.board()
+
+        for move in game.mainline_moves():
+            board.push(move)
+            fen_list.append(board.fen())
+
+        return fen_list
 
 
 class CSpark:
@@ -47,9 +58,9 @@ class CSpark:
 
     def move_val(self, pos_before, pos_after) -> float:
         self.stock.set_fen_position(pos_before)
-        SE = self.stock.get_evaluation()
+        se = self.stock.get_evaluation()
         self.stock.set_fen_position(pos_after)
-        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) - self.convert_dict_to_pawn_value(SE)
+        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) - self.convert_dict_to_pawn_value(se)
 
     def convert_dict_to_pawn_value(self, evaluation: dict) -> float:
         return float(evaluation.get('value')) / 100
@@ -64,12 +75,12 @@ class CSpark:
         limit = (2 * play_num - 1, 2 * play_num)[self.config.get_colour() == "white"]
 
         for i in range(start, limit - 1):
-            SE = self.move_val(self.pos_list[i], self.pos_list[i + 1])
+            se = self.move_val(self.pos_list[i], self.pos_list[i + 1])
 
             if turn == "white":
-                self.mlt.append(SE)
+                self.mlt.append(se)
             else:
-                self.mgt.append(SE)
+                self.mgt.append(se)
 
             turn = ("white", "black")[turn == "white"]
 
@@ -91,6 +102,20 @@ class CSpark:
                + match_averages.get('MLA') \
                + match_averages.get('MGA')
 
+    def average_position_evaluation(self, position):
+        se_total = 0
+        board = chess.Board()
+        board.set_fen(position)
+        legal = board.legal_moves
+
+        for move in legal:
+            board.set_fen(position)
+            board.push(move)
+            self.stock.set_fen_position(board.fen())
+            se_total += self.convert_dict_to_pawn_value(self.stock.get_evaluation())
+
+        return se_total / board.legal_moves.count()
+
     def cspark_estimation(self, play_num: int, estimate_play_num: int = 1) -> float:
         """
         :param play_num: number of the current play
@@ -98,7 +123,8 @@ class CSpark:
         :return: cspark estimation in pawn value
         """
         match_averages = self.match_average_until_play_num(play_num)
-        self.stock.set_fen_position(self.pos_list[play_num])
-        return self.convert_dict_to_pawn_value(self.stock.get_evaluation()) \
+        se_avg = self.average_position_evaluation(self.pos_list[play_num])
+        return se_avg \
                + match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
                + match_averages.get('MGA') * pow(self.config.get_opponent_emv(), estimate_play_num)
+
