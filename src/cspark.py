@@ -18,19 +18,20 @@ def extract_elo_from_pgn(pgn, colour):
     return elo_dict
 
 
-def estimated_move_value(emv_dict: dict, elo):
+def estimated_move_value(emv_dict: dict, elo) -> float:
     # 1400-1499 elo is R14
     rank = "R" + str(elo / 100)
     return emv_dict.get(rank)
 
 
 class CSparkConfig:
-    def __init__(self, pgn, colour, emv_dict):
+    def __init__(self, pgn, colour: str, emv_dict: dict, move_prob_dict: dict):
         self.pgn = pgn
         self.colour = colour
         self.elo_dict = extract_elo_from_pgn(pgn, colour)
         self.emv = estimated_move_value(emv_dict, self.elo_dict.get('elo'))
         self.opponent_emv = estimated_move_value(emv_dict, self.elo_dict.get('opponent_elo'))
+        self.move_prob_dict = move_prob_dict
 
     def get_pgn(self):
         return self.pgn
@@ -49,6 +50,9 @@ class CSparkConfig:
 
     def get_opponent_emv(self):
         return self.opponent_emv
+
+    def get_move_prob_dict(self):
+        return self.move_prob_dict
 
     def get_fen_list_from_pgn(self):
         fen_list = []
@@ -110,27 +114,30 @@ class CSpark:
 
         return dict(MLA=sum(self.mlt) / len(self.mlt), MGA=sum(self.mgt) / len(self.mgt))
 
-    def raw_cspark_estimation(self, play_num: int) -> float:
-        match_averages = self.match_average_until_play_num(play_num)
-        self.stock.set_fen_position(self.pos_list[play_num])
-        return convert_dict_to_pawn_value(self.stock.get_evaluation()) \
-               + match_averages.get('MLA') \
-               + match_averages.get('MGA')
-
-    def average_position_evaluation(self, position):
-        se_total = 0
+    def sorted_value_list(self, fen_position):
         board = chess.Board()
-        board.set_fen(position)
+        board.set_fen(fen_position)
         legal = board.legal_moves
+        val_list = []
 
         for move in legal:
-            board.set_fen(position)
+            board.set_fen(fen_position)
             board.push(move)
             self.stock.set_fen_position(board.fen())
-            se_total += convert_dict_to_pawn_value(self.stock.get_evaluation())
+            val_list.append(convert_dict_to_pawn_value(self.stock.get_evaluation()))
 
-        board.set_fen(position)
-        return se_total / board.legal_moves.count()
+        board.set_fen(fen_position)
+        val_list.sort()
+        return val_list
+
+    def conditional_position_evaluation(self, fen_position):
+        cpe = 0
+        val_list = self.sorted_value_list(fen_position)
+
+        for i in range(len(val_list)):
+            cpe += self.config.get_move_prob_dict().get(str(i)) * val_list[i]
+
+        return cpe
 
     def cspark_estimation(self, play_num: int, estimate_play_num: int = 1) -> float:
         """
@@ -139,7 +146,26 @@ class CSpark:
         :return: cspark estimation in pawn value
         """
         match_averages = self.match_average_until_play_num(play_num)
-        se_avg = self.average_position_evaluation(self.pos_list[play_num])
-        return se_avg \
+        cpe = self.conditional_position_evaluation(self.pos_list[play_num])
+        return cpe \
                + match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
                + match_averages.get('MGA') * pow(self.config.get_opponent_emv(), estimate_play_num)
+
+    def guess_next_move(self, play_num: int):
+        cse = self.cspark_estimation(play_num)
+        fen_position = self.pos_list[play_num]
+        board = chess.Board()
+        board.set_fen(fen_position)
+        legal = board.legal_moves
+        difference = 0
+        guess = None
+
+        for move in legal:
+            board.set_fen(fen_position)
+            board.push(move)
+            self.stock.set_fen_position(board.fen())
+            if difference > abs(convert_dict_to_pawn_value(self.stock.get_evaluation()) - cse):
+                difference = abs(convert_dict_to_pawn_value(self.stock.get_evaluation()) - cse)
+                guess = move.__str__()
+
+        return guess
