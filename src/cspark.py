@@ -3,10 +3,10 @@ import chess
 import chess.pgn
 
 
-def extract_elo_from_pgn(pgn, colour):
+def extract_elo_from_pgn(pgn_path, colour):
     elo_dict = dict()
-
-    game = chess.pgn.read_game(pgn)
+    with open(pgn_path, 'r') as pgn:
+        game = chess.pgn.read_game(pgn)
 
     if colour == "white":
         elo_dict['elo'] = game.headers.get('WhiteElo')
@@ -20,21 +20,21 @@ def extract_elo_from_pgn(pgn, colour):
 
 def estimated_move_value(emv_dict: dict, elo) -> float:
     # 1400-1499 elo is R14
-    rank = "R" + str(elo / 100)
+    rank = "R" + str(int(elo) // 100)
     return emv_dict.get(rank)
 
 
 class CSparkConfig:
-    def __init__(self, pgn, colour: str, emv_dict: dict, move_prob_dict: dict):
-        self.pgn = pgn
+    def __init__(self, pgn_path, colour: str, emv_dict: dict, move_prob_dict: dict):
+        self.pgn_path = pgn_path
         self.colour = colour
-        self.elo_dict = extract_elo_from_pgn(pgn, colour)
+        self.elo_dict = extract_elo_from_pgn(pgn_path, colour)
         self.emv = estimated_move_value(emv_dict, self.elo_dict.get('elo'))
         self.opponent_emv = estimated_move_value(emv_dict, self.elo_dict.get('opponent_elo'))
         self.move_prob_dict = move_prob_dict
 
     def get_pgn(self):
-        return self.pgn
+        return self.pgn_path
 
     def get_colour(self):
         return self.colour
@@ -56,7 +56,8 @@ class CSparkConfig:
 
     def get_fen_list_from_pgn(self):
         fen_list = []
-        game = chess.pgn.read_game(self.pgn)
+        with open(self.pgn_path, 'r') as pgn:
+            game = chess.pgn.read_game(pgn)
         board = game.board()
 
         for move in game.mainline_moves():
@@ -67,7 +68,11 @@ class CSparkConfig:
 
 
 def convert_dict_to_pawn_value(evaluation: dict) -> float:
-    return float(evaluation.get('value')) / 100
+    if evaluation.get('type') == "mate":
+        polarity = (-1, 1)[evaluation.get('value') > 0]
+        return 327.65 * polarity - 10 * evaluation.get('value')
+    else:
+        return float(evaluation.get('value')) / 100
 
 
 class CSpark:
@@ -103,7 +108,7 @@ class CSpark:
 
             turn = ("white", "black")[turn == "white"]
 
-    def match_average_until_play_num(self, play_num: int) -> dict[float, float]:
+    def match_average_until_play_num(self, play_num: int) -> dict:
         """
         #TODO : method when asked to get match averages of a previous play
         :param play_num: number of the current play
@@ -169,3 +174,7 @@ class CSpark:
                 guess = move.__str__()
 
         return guess
+
+    def __del__(self):
+        self.stock.stockfish.kill()
+        self.stock.stockfish.wait()
