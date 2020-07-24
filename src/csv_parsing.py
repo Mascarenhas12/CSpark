@@ -8,7 +8,6 @@ def csv_get_emv_dict():
     with open('../results/emv.csv', newline='') as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
-            print(row['elo_rank'], row['emv'])
             emv_dict[row['elo_rank']] = float(row['emv'])
 
     return emv_dict

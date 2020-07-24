@@ -11,7 +11,7 @@ class CSparkTest(unittest.TestCase):
         a = np.random.random_sample(size=218)
         a /= sum(a)
         self.move_prob = {str(x): a[x] for x in range(len(a))}
-        self.config = CSparkConfig("tests/resources/2vincent2 vs docboss,1399394103794.pgn",
+        self.config = CSparkConfig("resources/2vincent2 vs docboss,1399394103794.pgn",
                                    "white",
                                    {
                                        "R14": 2,
@@ -25,6 +25,18 @@ class CSparkTest(unittest.TestCase):
         del self.spark
 
     def test_move_val(self):
+        self.assertLessEqual(self.spark.move_val(
+            'rn2k2r/ppp1bpp1/3p3p/8/2BBP3/2P2q1P/PP3PP1/R3K2R w KQkq - 0 13',
+            'rn2k2r/ppp1bpp1/3p3p/8/2BBP3/2P2P1P/PP3P2/R3K2R b KQkq - 0 13'),
+            0.47
+        )
+        self.assertGreaterEqual(self.spark.move_val(
+            'rn2k2r/ppp1bpp1/3p3p/8/2BBP3/2P2q1P/PP3PP1/R3K2R w KQkq - 0 13',
+            'rn2k2r/ppp1bpp1/3p3p/8/2BBP3/2P2P1P/PP3P2/R3K2R b KQkq - 0 13'),
+            -0.24
+        )
+
+    def test_match_total_until_play_num(self):
         pass
 
 

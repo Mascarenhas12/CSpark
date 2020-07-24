@@ -72,7 +72,7 @@ def convert_dict_to_pawn_value(evaluation: dict) -> float:
         polarity = (-1, 1)[evaluation.get('value') > 0]
         return 327.65 * polarity - 10 * evaluation.get('value')
     else:
-        return float(evaluation.get('value')) / 100
+        return evaluation.get('value') / 100
 
 
 class CSpark:
@@ -80,8 +80,7 @@ class CSpark:
         self.stock = Stockfish("/usr/games/stockfish")
         self.config = config
         self.pos_list = config.get_fen_list_from_pgn()
-        self.mlt = []
-        self.mgt = []
+        self.mlt = self.mgt = []
 
     def move_val(self, pos_before, pos_after) -> float:
         self.stock.set_fen_position(pos_before)
@@ -110,7 +109,7 @@ class CSpark:
 
     def match_average_until_play_num(self, play_num: int) -> dict:
         """
-        #TODO : method when asked to get match averages of a previous play
+        #TODO: *OPTIMIZATION* method when asked to get match averages of a previous play
         :param play_num: number of the current play
         :return: dictionary of Match Loss Average and Match Gain Average
         """
@@ -133,6 +132,8 @@ class CSpark:
 
         board.set_fen(fen_position)
         val_list.sort()
+        if self.config.get_colour() == "white":
+            val_list.reverse()
         return val_list
 
     def conditional_position_evaluation(self, fen_position):
