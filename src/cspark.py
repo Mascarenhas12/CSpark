@@ -80,13 +80,14 @@ class CSpark:
         self.stock = Stockfish("/usr/games/stockfish")
         self.config = config
         self.pos_list = config.get_fen_list_from_pgn()
-        self.mlt = self.mgt = []
+        self.mlt = []
+        self.mgt = []
 
     def move_val(self, pos_before, pos_after) -> float:
         self.stock.set_fen_position(pos_before)
         se = self.stock.get_evaluation()
         self.stock.set_fen_position(pos_after)
-        return convert_dict_to_pawn_value(self.stock.get_evaluation()) - convert_dict_to_pawn_value(se)
+        return abs(convert_dict_to_pawn_value(self.stock.get_evaluation()) - convert_dict_to_pawn_value(se))
 
     def match_total_until_play_num(self, play_num: int, start: int) -> None:
         """
@@ -115,7 +116,8 @@ class CSpark:
         """
 
         self.match_total_until_play_num(play_num, len(self.mlt) + len(self.mgt))
-
+        print(self.mlt)
+        print(self.mgt)
         return dict(MLA=sum(self.mlt) / len(self.mlt), MGA=sum(self.mgt) / len(self.mgt))
 
     def sorted_value_list(self, fen_position):
@@ -154,7 +156,7 @@ class CSpark:
         match_averages = self.match_average_until_play_num(play_num)
         cpe = self.conditional_position_evaluation(self.pos_list[play_num])
         return cpe \
-               + match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
+               - match_averages.get('MLA') * pow(self.config.get_emv(), estimate_play_num) \
                + match_averages.get('MGA') * pow(self.config.get_opponent_emv(), estimate_play_num)
 
     def guess_next_move(self, play_num: int):

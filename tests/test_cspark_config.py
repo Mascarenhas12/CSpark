@@ -1,5 +1,5 @@
 import unittest
-
+import os
 from src.cspark import CSparkConfig
 from src.cspark import estimated_move_value
 from src.cspark import convert_dict_to_pawn_value
@@ -7,7 +7,8 @@ from src.cspark import convert_dict_to_pawn_value
 
 class CSparkConfigTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.config = CSparkConfig("tests/resources/2vincent2 vs docboss,1399394103794.pgn",
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.config = CSparkConfig(dir_path+ "/resources/2vincent2 vs docboss,1399394103794.pgn",
                                    "white",
                                    {
                                        "R14": 2,
