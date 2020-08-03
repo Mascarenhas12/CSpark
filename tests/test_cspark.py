@@ -39,10 +39,10 @@ class CSparkTest(unittest.TestCase):
         result = self.spark.match_average_until_play_num(10)
         print(result)
 
-        self.assertLessEqual(result.get('MLA'), 0.82)
-        self.assertLessEqual(result.get('MGA'), 0.9)
-        self.assertGreaterEqual(result.get('MLA'), 0.32)
-        self.assertGreaterEqual(result.get('MGA'), 0.4)
+        self.assertLessEqual(result.get('MLA'), 0.89)
+        self.assertLessEqual(result.get('MGA'), 0.83)
+        self.assertGreaterEqual(result.get('MLA'), 0.39)
+        self.assertGreaterEqual(result.get('MGA'), 0.33)
 
 
 if __name__ == '__main__':
