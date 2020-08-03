@@ -58,7 +58,9 @@ class CSparkConfig:
         fen_list = []
         with open(self.pgn_path, 'r') as pgn:
             game = chess.pgn.read_game(pgn)
+
         board = game.board()
+        fen_list.append(board.fen())
 
         for move in game.mainline_moves():
             board.push(move)
@@ -98,7 +100,7 @@ class CSpark:
         turn = "white"
         limit = (2 * play_num - 1, 2 * play_num)[self.config.get_colour() == "white"]
 
-        for i in range(start, limit - 1):
+        for i in range(start, limit):
             se = self.move_val(self.pos_list[i], self.pos_list[i + 1])
 
             if turn == "white":

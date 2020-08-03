@@ -41,7 +41,8 @@ class CSparkConfigTest(unittest.TestCase):
 
     def test_get_fen_list_from_pgn(self):
         self.assertEqual(self.config.get_fen_list_from_pgn(),
-                         ['rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
+                         ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                          'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
                           'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
                           'rnbqkbnr/pppp1ppp/8/4p3/4P3/2P5/PP1P1PPP/RNBQKBNR b KQkq - 0 2',
                           'rnbqkbnr/pppp1pp1/7p/4p3/4P3/2P5/PP1P1PPP/RNBQKBNR w KQkq - 0 3',
