@@ -29,19 +29,16 @@ def create_move_prob_dict_csv():
                     for legal in board.legal_moves:
                         board.push_uci(legal.uci())
                         stock.set_fen_position(board.fen())
-                        move_ev.append(value(stock.get_evaluation()))
+                        move_ev.append({"move": legal.uci(), "val": value(stock.get_evaluation())})
                         board.set_fen(base_fen)
 
-                    move_ev.sort()
-                    move_ev.reverse()
-                    board.push(move)
-                    stock.set_fen_position(board.fen())
-                    ev = value(stock.get_evaluation())
-                    # NOT GOING TO WORK BECAUSE STOCKFISH GIVES DIFFERENT EVALUATIONS
-                    move_rank = move_ev.index(list(filter(lambda x: x <= ev, move_ev))[0]) - 1
-                    elo = (game.headers['WhiteElo'], game.headers['BlackElo'])[board.turn]
+                    new = sorted(move_ev, key=lambda m: m['val'], reverse=board.turn)
+                    move_rank = next((index for (index, d) in enumerate(new) if d["move"] == move.uci()), None) + 1
+
+                    elo = (game.headers['BlackElo'], game.headers['WhiteElo'])[board.turn]
                     elo_rank = "R" + str(int(elo) // 100)
-                    result.write("" + elo_rank + "," + str(move_rank))
+                    result.write("" + elo_rank + "," + str(move_rank) + "\n")
+                    board.push(move)
 
 
 create_move_prob_dict_csv()
