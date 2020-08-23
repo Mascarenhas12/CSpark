@@ -5,7 +5,8 @@ from src.cspark import convert_dict_to_pawn_value as value
 import os
 
 
-def create_move_prob_dict_csv():
+def create_move_prob_data_csv(game_dir):
+    # TODO: OPTIMIZATION use threading for files in directory
     """
                Go through every pgn and setup game DONE
                Go through all positions DONE
@@ -16,8 +17,9 @@ def create_move_prob_dict_csv():
    """
 
     with open('../results/move_prob_data.csv', 'w') as result:
-        for filename in os.listdir('../tests/resources'):
-            with open("../tests/resources/" + filename, 'r') as pgn:
+        result.write("elo_rank,move_rank\n")
+        for filename in os.listdir(game_dir):
+            with open(game_dir + filename, 'r') as pgn:
                 game = chess.pgn.read_game(pgn)
                 stock = Stockfish("/usr/games/stockfish")
                 board = game.board()
@@ -39,6 +41,3 @@ def create_move_prob_dict_csv():
                     elo_rank = "R" + str(int(elo) // 100)
                     result.write("" + elo_rank + "," + str(move_rank) + "\n")
                     board.push(move)
-
-
-create_move_prob_dict_csv()
