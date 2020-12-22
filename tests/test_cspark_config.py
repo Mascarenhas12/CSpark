@@ -1,8 +1,8 @@
 import unittest
 import os
-from src.cspark import CSparkConfig
-from src.cspark import estimated_move_value
-from src.cspark import convert_dict_to_pawn_value
+from src.csparkconfig import CSparkConfig
+from src.utils import estimated_move_value
+from src.utils import convert_dict_to_pawn_value
 
 
 class CSparkConfigTest(unittest.TestCase):

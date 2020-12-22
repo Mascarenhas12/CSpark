@@ -1,10 +1,9 @@
 import unittest
 import os
-
 import numpy as np
 import numpy.random
-
-from src.cspark import CSparkConfig, CSpark
+from src.csparkconfig import CSparkConfig
+from src.cspark import CSpark
 
 
 class CSparkTest(unittest.TestCase):
