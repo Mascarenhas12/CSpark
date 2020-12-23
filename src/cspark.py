@@ -10,8 +10,8 @@ class CSpark:
         self.stock = Stockfish("/usr/games/stockfish")
         self.config = config
         self.pos_list = config.get_fen_list_from_pgn()
-        self.mlt = []
-        self.mgt = []
+        self.mlt = {}
+        self.mgt = {}
 
     def get_position(self, pos: int) -> str:
         if 0 <= pos <= len(self.pos_list):
@@ -34,29 +34,30 @@ class CSpark:
         turn = "white"
         limit = (2 * play_num - 1, 2 * play_num)[self.config.get_colour() == "white"]
 
-        for i in range(start, limit):
+        for i in range(start, limit + 1):
             se = self.move_val(self.pos_list[i], self.pos_list[i + 1])
 
             if turn == "white":
-                self.mlt.append(se)
+                self.mlt[i] = se
             else:
-                self.mgt.append(se)
+                self.mgt[i] = se
 
             turn = ("white", "black")[turn == "white"]
 
     def match_average_until_play_num(self, play_num: int) -> dict:
         """
-        #TODO: *OPTIMIZATION* method when asked to get match averages of a previous play
         :param play_num: number of the current play
         :return: dictionary of Match Loss Average and Match Gain Average
         """
+        start = len(list(self.mlt)) + len(list(self.mgt))
+        self.match_total_until_play_num(play_num, start=start)
+        mlt = list(self.mlt.values())
+        mgt = list(self.mgt.values())
+        MLA = sum(mlt) / len(mlt) if len(mlt) != 0 else 0
+        MGA = sum(mgt) / len(mgt) if len(mgt) != 0 else 0
+        return dict(MLA=MLA, MGA=MGA)
 
-        self.match_total_until_play_num(play_num, len(self.mlt) + len(self.mgt))
-        print(self.mlt)
-        print(self.mgt)
-        return dict(MLA=sum(self.mlt) / len(self.mlt), MGA=sum(self.mgt) / len(self.mgt))
-
-    def sorted_value_list(self, fen_position):
+    def sorted_value_list(self, fen_position: str) -> list:
         board = chess.Board()
         board.set_fen(fen_position)
         legal = board.legal_moves
@@ -74,7 +75,7 @@ class CSpark:
             val_list.reverse()
         return val_list
 
-    def conditional_position_evaluation(self, fen_position):
+    def conditional_position_evaluation(self, fen_position: str) -> float:
         cpe = 0
         val_list = self.sorted_value_list(fen_position)
 

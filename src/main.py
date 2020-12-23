@@ -59,10 +59,22 @@ def action_previous_position():
 
 
 def action_estimate_position():
+    clear_screen()
+    board = cspark.get_position(current_pos)
+    estimate = cspark.cspark_estimation(current_pos)
+    print(bold(board))
+    print("\n")
+    print(f"CPE: {estimate}")
     return analysis_menu.select_action()
 
 
 def action_guess_move():
+    clear_screen()
+    board = cspark.get_position(current_pos)
+    move = cspark.guess_next_move(current_pos)
+    print(bold(board))
+    print("\n")
+    print(f"Next Move is: {move}")
     return analysis_menu.select_action()
 
 
